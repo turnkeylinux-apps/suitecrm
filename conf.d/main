@@ -1,23 +1,28 @@
 #!/bin/sh -ex
 
-DB_NAME=sugarcrm
-DB_USER=sugarcrm
+DB_NAME=suitecrm
+DB_USER=suitecrm
 DB_PASS=$(mcookie)
 
 ADMIN_NAME=admin
 ADMIN_PASS=turnkey
 
 SRC=/usr/local/src
-WEBROOT=/var/www/sugarcrm
+WEBROOT=/var/www/suitecrm
 
 # unpack and configure
-unzip $SRC/SugarCE-*.zip -d $SRC
-rm $SRC/SugarCE-*.zip
-mv $SRC/SugarCE-* $WEBROOT
+unzip $SRC/v*.zip -d $SRC
+rm $SRC/v*.zip
+mv $SRC/SuiteCRM-* $WEBROOT
 chown -R root:root $WEBROOT
 
 touch $WEBROOT/install.log
+touch $WEBROOT/config.php
 touch $WEBROOT/config_override.php
+touch $WEBROOT/sugarcrm.log
+touch $WEBROOT/suitecrm.log
+touch $WEBROOT/.htaccess
+mkdir -p $WEBROOT/cache
 
 chown -R www-data:www-data $WEBROOT/cache
 chown -R www-data:www-data $WEBROOT/custom
@@ -25,6 +30,7 @@ chown -R www-data:www-data $WEBROOT/modules
 chown -R www-data:www-data $WEBROOT/upload
 chown www-data:www-data $WEBROOT/config.php
 chown www-data:www-data $WEBROOT/sugarcrm.log
+chown www-data:www-data $WEBROOT/suitecrm.log
 chown www-data:www-data $WEBROOT/install.log
 chown www-data:www-data $WEBROOT/config_override.php
 chown www-data:www-data $WEBROOT/.htaccess
@@ -37,7 +43,7 @@ sed -i "s|^;date.timezone.*|date.timezone = \"UTC\"|" $PHPINI
 
 # configure apache
 a2dissite 000-default
-a2ensite sugarcrm
+a2ensite suitecrm
 a2enmod rewrite
 
 # start services
@@ -76,19 +82,19 @@ sed -i "s|'db_password.*|'db_password' => '$DB_PASS',|" $WEBROOT/config.php
 
 # blank out logs
 echo > $WEBROOT/install.log
-echo > $WEBROOT/sugarcrm.log
+echo > $WEBROOT/suitecrm.log
 
 # tweak permissions
 chown root:root $WEBROOT/.htaccess
 chmod 640 $WEBROOT/config.php
 
 # setup cron
-CRON_SUGARCRM=/etc/cron.hourly/sugarcrm
-cat >$CRON_SUGARCRM<<EOF
+CRON_SUITECRM=/etc/cron.hourly/suitecrm
+cat >$CRON_SUITECRM<<EOF
 #!/bin/bash -e
-# Trigger sugarcrm cron
+# Trigger suitecrm cron
 
-su www-data -c "cd /var/www/sugarcrm; php -f cron.php > /dev/null 2>&1"
+su www-data -c "cd /var/www/suitecrm; php -f cron.php > /dev/null 2>&1"
 EOF
-chmod +x $CRON_SUGARCRM
+chmod +x $CRON_SUITECRM
 
