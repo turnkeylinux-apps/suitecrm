@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""Set SugarCRM admin password
+"""Set SuiteCRM admin password
 
 Option:
     --pass=     unless provided, will ask interactively
@@ -37,13 +37,13 @@ def main():
     if not password:
         d = Dialog('TurnKey Linux - First boot configuration')
         password = d.get_password(
-            "SugarCRM Password",
-            "Enter new password for the SugarCRM 'admin' account.")
+            "SuiteCRM Password",
+            "Enter new password for the SuiteCRM 'admin' account.")
 
     hash_pass = hashlib.md5(password).hexdigest()
 
     m = MySQL()
-    m.execute('UPDATE sugarcrm.users SET user_hash=\"%s\" WHERE user_name=\"admin\";' % hash_pass)
+    m.execute('UPDATE suitecrm.users SET user_hash=\"%s\" WHERE user_name=\"admin\";' % hash_pass)
 
 if __name__ == "__main__":
     main()
