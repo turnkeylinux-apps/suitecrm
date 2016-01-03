@@ -16,24 +16,15 @@ rm $SRC/v*.zip
 mv $SRC/SuiteCRM-* $WEBROOT
 chown -R root:root $WEBROOT
 
-touch $WEBROOT/install.log
-touch $WEBROOT/config.php
-touch $WEBROOT/config_override.php
-touch $WEBROOT/sugarcrm.log
-touch $WEBROOT/suitecrm.log
-touch $WEBROOT/.htaccess
 mkdir -p $WEBROOT/cache
 
-chown -R www-data:www-data $WEBROOT/cache
-chown -R www-data:www-data $WEBROOT/custom
-chown -R www-data:www-data $WEBROOT/modules
-chown -R www-data:www-data $WEBROOT/upload
-chown www-data:www-data $WEBROOT/config.php
-chown www-data:www-data $WEBROOT/sugarcrm.log
-chown www-data:www-data $WEBROOT/suitecrm.log
-chown www-data:www-data $WEBROOT/install.log
-chown www-data:www-data $WEBROOT/config_override.php
-chown www-data:www-data $WEBROOT/.htaccess
+for i in install.log config.php config_override.php sugarcrm.log .htaccess; do
+    touch $WEBROOT/$i
+done
+
+for i in cache custom modules upload config.php sugarcrm.log suitecrm.log install.log config_override.php .htaccess; do
+    chown -R www-data:www-data $WEBROOT/$i
+done
 
 # php.ini tweaks
 PHPINI=/etc/php5/apache2/php.ini
