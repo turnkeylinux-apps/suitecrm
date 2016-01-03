@@ -38,8 +38,8 @@ a2ensite suitecrm
 a2enmod rewrite
 
 # start services
-/etc/init.d/mysql start
-/etc/init.d/apache2 start
+service mysql start
+service apache2 start
 
 # curl based install
 URL="http://127.0.0.1/install.php"
@@ -68,8 +68,8 @@ sed -i "s|'db_user_name.*|'db_user_name' => '$DB_USER',|" $WEBROOT/config.php
 sed -i "s|'db_password.*|'db_password' => '$DB_PASS',|" $WEBROOT/config.php
 
 # stop services
-/etc/init.d/apache2 stop
-/etc/init.d/mysql stop
+service apache2 stop
+service mysql stop
 
 # blank out logs
 echo > $WEBROOT/install.log
