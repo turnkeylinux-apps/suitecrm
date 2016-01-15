@@ -1,3 +1,14 @@
+turnkey-suitecrm-14.1 (1) turnkey; urgency=low
+
+  * SuiteCRM upgraded to the latest upstream version (7.4.3)
+
+  * cURL-based installation replaced by SugarCRM Silent Installer.
+
+  * Note: Please refer to turnkey-core's changelog for changes common to all
+    appliances. Here we only describe changes specific to this appliance.
+
+ -- Anton Pyrogovskyi <anton@turnkeylinux.org>  Fri, 15 Jan 2016 08:32:05 +0100
+
 turnkey-suitecrm-14.0 (1) turnkey; urgency=low
 
   * SuiteCRM:
