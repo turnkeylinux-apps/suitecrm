@@ -16,24 +16,15 @@ rm $SRC/v*.zip
 mv $SRC/SuiteCRM-* $WEBROOT
 chown -R root:root $WEBROOT
 
-touch $WEBROOT/install.log
-touch $WEBROOT/config.php
-touch $WEBROOT/config_override.php
-touch $WEBROOT/sugarcrm.log
-touch $WEBROOT/suitecrm.log
-touch $WEBROOT/.htaccess
 mkdir -p $WEBROOT/cache
 
-chown -R www-data:www-data $WEBROOT/cache
-chown -R www-data:www-data $WEBROOT/custom
-chown -R www-data:www-data $WEBROOT/modules
-chown -R www-data:www-data $WEBROOT/upload
-chown www-data:www-data $WEBROOT/config.php
-chown www-data:www-data $WEBROOT/sugarcrm.log
-chown www-data:www-data $WEBROOT/suitecrm.log
-chown www-data:www-data $WEBROOT/install.log
-chown www-data:www-data $WEBROOT/config_override.php
-chown www-data:www-data $WEBROOT/.htaccess
+for i in install.log config.php config_override.php sugarcrm.log suitecrm.log .htaccess; do
+    touch $WEBROOT/$i
+done
+
+for i in cache custom modules upload config.php sugarcrm.log suitecrm.log install.log config_override.php .htaccess; do
+    chown -R www-data:www-data $WEBROOT/$i
+done
 
 # php.ini tweaks
 PHPINI=/etc/php5/apache2/php.ini
@@ -47,38 +38,55 @@ a2ensite suitecrm
 a2enmod rewrite
 
 # start services
-/etc/init.d/mysql start
-/etc/init.d/apache2 start
+service mysql start
+service apache2 start
 
-# curl based install
-URL="http://127.0.0.1/install.php"
-CURL="curl -c /tmp/cookie -b /tmp/cookie"
+cat << EOF > $WEBROOT/config_si.php
+<?php
+    \$sugar_config_si = array (
+        'default_currency_iso4217' => 'USD',
+        'default_currency_name' => 'US Dollars',
+        'default_currency_significant_digits' => '2',
+        'default_currency_symbol' => '$',
+        'default_date_format' => 'Y-m-d',
+        'default_decimal_seperator' => '.',
+        'default_export_charset' => 'ISO-8859-1',
+        'default_language' => 'en_us',
+        'default_locale_name_format' => 's f l',
+        'default_number_grouping_seperator'    => ',',
+        'default_time_format' => 'H:i',
+        'export_delimiter' => ',',
+        'setup_db_admin_password' => '$MYSQL_PASS', // DATABASE ADMIN USER PASSWORD
+        'setup_db_admin_user_name' => 'root', // DATABASE ADMIN USER NAME
+        'setup_db_create_database' => '1', // CREATE THE DATABASE IF IT DOESN'T EXIST
+        'setup_db_drop_tables' => '1', // DROP THE TABLES IF THEY EXIST
+        'setup_db_sugarsales_password' => '$DB_PASS', // THE DATABASE PASSWORD TO USE AFTER INSTALLATION TO CONNECT
+        'setup_db_sugarsales_password_retype' => '$DB_PASS', // AGAIN
+        'setup_db_sugarsales_user' => '$DB_USER', // THE DATABASE USER TO USE AFTER INSTALLATION TO CONNECT
+        'setup_db_type' => 'mysql', // OR OTHER DATABASE TYPE (ibm_db2, etc)
+        'setup_db_host_name' => 'localhost', // DATABASE HOST LOCATION
+        'setup_db_port_num' => '3306', // DATABASE PORT
+        'setup_db_create_sugarsales_user' => 1, // CREATE THE DATABASE USER TO USE AFTER INSTALLATION
+        'setup_db_database_name' => '$DB_NAME', // THE DATABASE NAME
+        'setup_db_pop_demo_data' => 0, // (0 or 1) POPULATE DEMO DATA
+        'dbUSRData' => 'create',
+        'demoData' => 'no', // (yes or no) POPULATE DEMO DATA
+        'setup_site_admin_user_name'=> '$ADMIN_NAME', // SUGAR ADMIN USER NAME
+        'setup_site_admin_password' => '$ADMIN_PASS', // SUGAR ADMIN PASSWORD
+        'setup_site_url' => 'http://127.0.0.1/', // PATH TO SUGAR INSTANCE VIA URL
+        'setup_system_name' => 'TurnKey SuiteCRM' // INSTANCE NAME
+    );
+EOF
 
-$CURL $URL --data "current_step=0&goto=Next&language=en_us"
-$CURL $URL --data "current_step=1&goto=Next"
-$CURL $URL --data "current_step=2&goto=Next&setup_license_accept=on"
-$CURL $URL --data "current_step=3&goto=Next&install_type=custom"
-$CURL $URL --data "current_step=4&goto=Next&setup_db_type=mysql"
-$CURL $URL --data "checkDBSettings=true&to_pdf=1&sugar_body_only=1&setup_db_database_name=$DB_NAME&setup_db_host_name=localhost&setup_db_admin_user_name=root&setup_db_admin_password=$MYSQL_PASS&setup_db_sugarsales_user=&setup_db_sugarsales_password=&setup_db_sugarsales_password_retype=&dbUSRData=same&demoData=no&to_pdf=1&sugar_body_only=1"
-$CURL $URL --data "current_step=5&goto=Next&setup_db_drop_tables=&setup_db_database_name=$DB_NAME&setup_db_host_name=localhost&setup_db_admin_user_name=root&setup_db_admin_password_entry=$MYSQL_PASS&setup_db_admin_password=&dbUSRData=same&setup_db_sugarsales_user=&setup_db_sugarsales_password_entry=&setup_db_sugarsales_password=&setup_db_sugarsales_password=&setup_db_sugarsales_password_retype_entry=&setup_db_sugarsales_password_retype=&demoData=no"
-$CURL $URL --data "current_step=6&goto=Next&setup_site_url=http%3A%2F%2F127.0.0.1&setup_system_name=TurnKey+SuiteCRM&setup_db_collation=utf8_general_ci&setup_site_admin_user_name=$ADMIN_NAME&setup_site_admin_password=$ADMIN_PASS&setup_site_admin_password_retype=$ADMIN_PASS"
-$CURL $URL --data "current_step=7&goto=Next&setup_site_session_path=&setup_site_log_dir=.&setup_site_guid="
-$CURL $URL --data "current_step=8&goto=Next"
-$CURL $URL --data "default_user_name=admin&next=Finish"
+curl 'http://127.0.0.1/install.php' --data 'goto=SilentInstall&cli=true'
 
-rm -f /tmp/cookie
+rm -f $WEBROOT/config_si.php
 
-# workaround installer bug (broken add user password check)
-MYSQL_BATCH="mysql --user=root --password=$MYSQL_PASS --batch"
-
-$MYSQL_BATCH --execute "grant all privileges on $DB_NAME.* to $DB_USER@localhost identified by '$DB_PASS'; flush privileges;"
-
-sed -i "s|'db_user_name.*|'db_user_name' => '$DB_USER',|" $WEBROOT/config.php
-sed -i "s|'db_password.*|'db_password' => '$DB_PASS',|" $WEBROOT/config.php
+mysql --user=root --password=$MYSQL_PASS --batch --execute "UPDATE suitecrm.outbound_email SET mail_smtpserver = '127.0.0.1', mail_smtpauth_req = 0 WHERE name = 'system';"
 
 # stop services
-/etc/init.d/apache2 stop
-/etc/init.d/mysql stop
+service apache2 stop
+service mysql stop
 
 # blank out logs
 echo > $WEBROOT/install.log
@@ -94,7 +102,7 @@ cat >$CRON_SUITECRM<<EOF
 #!/bin/bash -e
 # Trigger suitecrm cron
 
-su www-data -c "cd /var/www/suitecrm; php -f cron.php > /dev/null 2>&1"
+su www-data -c "cd /var/www/suitecrm && php -f cron.php > /dev/null 2>&1"
 EOF
 chmod +x $CRON_SUITECRM
 
