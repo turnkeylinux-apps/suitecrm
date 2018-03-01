@@ -11,9 +11,9 @@ SRC=/usr/local/src
 WEBROOT=/var/www/suitecrm
 
 # unpack and configure
-unzip $SRC/v*.zip -d $SRC
-rm $SRC/v*.zip
-mv $SRC/SuiteCRM-* $WEBROOT
+unzip $SRC/S*.zip -d $SRC
+rm $SRC/S*.zip
+mv $SRC/SuiteCRM* $WEBROOT
 chown -R root:root $WEBROOT
 
 mkdir -p $WEBROOT/cache
@@ -27,7 +27,7 @@ for i in cache custom modules upload config.php sugarcrm.log suitecrm.log instal
 done
 
 # php.ini tweaks
-PHPINI=/etc/php5/apache2/php.ini
+PHPINI=/etc/php/7.0/apache2/php.ini
 sed -i "s|^memory_limit.*|memory_limit = 256M|" $PHPINI
 sed -i "s|^variables_order.*|variables_order = \"EGPCS\"|" $PHPINI
 sed -i "s|^;date.timezone.*|date.timezone = \"UTC\"|" $PHPINI
@@ -40,6 +40,9 @@ a2enmod rewrite
 # start services
 service mysql start
 service apache2 start
+
+#cd $WEBROOT
+#composer install
 
 cat << EOF > $WEBROOT/config_si.php
 <?php
@@ -56,8 +59,8 @@ cat << EOF > $WEBROOT/config_si.php
         'default_number_grouping_seperator'    => ',',
         'default_time_format' => 'H:i',
         'export_delimiter' => ',',
-        'setup_db_admin_password' => '$MYSQL_PASS', // DATABASE ADMIN USER PASSWORD
-        'setup_db_admin_user_name' => 'root', // DATABASE ADMIN USER NAME
+        'setup_db_admin_password' => '$DB_PASS', // DATABASE ADMIN USER PASSWORD
+        'setup_db_admin_user_name' => '$DB_USER', // DATABASE ADMIN USER NAME
         'setup_db_create_database' => '1', // CREATE THE DATABASE IF IT DOESN'T EXIST
         'setup_db_drop_tables' => '1', // DROP THE TABLES IF THEY EXIST
         'setup_db_sugarsales_password' => '$DB_PASS', // THE DATABASE PASSWORD TO USE AFTER INSTALLATION TO CONNECT
@@ -69,20 +72,20 @@ cat << EOF > $WEBROOT/config_si.php
         'setup_db_create_sugarsales_user' => 1, // CREATE THE DATABASE USER TO USE AFTER INSTALLATION
         'setup_db_database_name' => '$DB_NAME', // THE DATABASE NAME
         'setup_db_pop_demo_data' => 0, // (0 or 1) POPULATE DEMO DATA
-        'dbUSRData' => 'create',
+        'dbUSRData' => 'same',
         'demoData' => 'no', // (yes or no) POPULATE DEMO DATA
         'setup_site_admin_user_name'=> '$ADMIN_NAME', // SUGAR ADMIN USER NAME
         'setup_site_admin_password' => '$ADMIN_PASS', // SUGAR ADMIN PASSWORD
+	'setup_site_admin_email' => 'admin@example.com',
         'setup_site_url' => 'http://127.0.0.1/', // PATH TO SUGAR INSTANCE VIA URL
         'setup_system_name' => 'TurnKey SuiteCRM' // INSTANCE NAME
     );
 EOF
 
+mysql --user=root --password=$MYSQL_PASS --batch --execute "CREATE DATABASE $DB_NAME; GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,ALTER ON $DB_NAME.* TO $DB_USER@localhost IDENTIFIED BY '$DB_PASS'; FLUSH PRIVILEGES;"
 curl 'http://127.0.0.1/install.php' --data 'goto=SilentInstall&cli=true'
-
-rm -f $WEBROOT/config_si.php
-
 mysql --user=root --password=$MYSQL_PASS --batch --execute "UPDATE suitecrm.outbound_email SET mail_smtpserver = '127.0.0.1', mail_smtpauth_req = 0 WHERE name = 'system';"
+rm -f $WEBROOT/config_si.php
 
 # stop services
 service apache2 stop

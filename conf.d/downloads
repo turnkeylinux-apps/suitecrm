@@ -5,8 +5,7 @@ dl() {
     cd $2; curl -L -f -O $PROXY $1; cd -
 }
 
-VERSION="v7.8.3.zip"
-URL="https://github.com/salesagility/SuiteCRM/archive/$VERSION"
+URL="https://suitecrm.com/files/160/SuiteCRM-7.10/224/SuiteCRM-7.10.zip"
 
 dl $URL /usr/local/src
 
