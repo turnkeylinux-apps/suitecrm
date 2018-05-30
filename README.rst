@@ -18,6 +18,7 @@ and on top of that:
    
    - Installed from upstream source code to /var/www/suitecrm
    - Includes cronjob to trigger SuiteCRM cron tasks.
+   - Web-folder permissions can be configured via confconsole: System settings > Suitecrm permissions
 
 - SSL support out of the box.
 - `Adminer`_ administration frontend for MySQL (listening on port
