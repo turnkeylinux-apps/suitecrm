@@ -5,6 +5,6 @@ dl() {
     cd $2; curl -L -f -O $PROXY $1; cd -
 }
 
-URL="https://suitecrm.com/files/156/SuiteCRM-7.8/288/SuiteCRM-7.8.20.zip"
+URL="https://suitecrm.com/files/156/SuiteCRM-7.8/322/SuiteCRM-7.8.23.zip"
 dl $URL /usr/local/src
 

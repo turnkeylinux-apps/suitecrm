@@ -1,6 +1,6 @@
 turnkey-suitecrm-15.0 (1) turnkey; urgency=low
 
-  * Install latest upstream LTS version of SuiteCRM (7.8.20)
+  * Install latest upstream LTS version of SuiteCRM (7.8.23)
 
   * Install Adminer directly from stretch/main repo
 
