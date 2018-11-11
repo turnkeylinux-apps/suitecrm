@@ -1,6 +1,12 @@
-turnkey-suitecrm-15.0 (1) turnkey; urgency=low
+turnkey-suitecrm-15.1 (1) turnkey; urgency=low
 
   * Install latest upstream LTS version of SuiteCRM (7.8.23)
+
+ -- Stefan Davis <stefan@turnkeylinux.org>  Sun, 11 Nov 2018 21:22:02 +0000
+
+turnkey-suitecrm-15.0 (1) turnkey; urgency=low
+
+  * Install latest upstream LTS version of SuiteCRM (7.8.20)
 
   * Install Adminer directly from stretch/main repo
 
