@@ -2,8 +2,7 @@
 
 import os
 from os import path
-from executil import system
-from subprocess import Popen, CalledProcessError, PIPE
+import subprocess
 
 TITLE = 'Update CRM Folder Permissions'
 TEXT = 'The permissions in the SuiteCRM appliance do not currently support updates via WebUI. Here you can setup permissions to use the WebUI to upgrade SuiteCRM.'
@@ -15,7 +14,7 @@ def run():
     ])
     if choice:
         cmd = path.join(path.dirname(__file__), 'suitecrm_permissions.sh')
-        system(cmd, choice)
+        subprocess.run([cmd, choice])
         console.msgbox(TITLE, choice + ' settings was set.')
         return
 
