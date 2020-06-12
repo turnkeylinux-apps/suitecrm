@@ -27,7 +27,7 @@ for i in cache custom modules upload config.php sugarcrm.log suitecrm.log instal
 done
 
 # php.ini tweaks
-PHPINI=/etc/php/7.0/apache2/php.ini
+PHPINI=/etc/php/7.3/apache2/php.ini
 sed -i "s|^memory_limit.*|memory_limit = 256M|" $PHPINI
 sed -i "s|^variables_order.*|variables_order = \"EGPCS\"|" $PHPINI
 sed -i "s|^;date.timezone.*|date.timezone = \"UTC\"|" $PHPINI
