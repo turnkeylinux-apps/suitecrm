@@ -41,9 +41,6 @@ a2enmod rewrite
 service mysql start
 service apache2 start
 
-#cd $WEBROOT
-#composer install
-
 cat << EOF > $WEBROOT/config_si.php
 <?php
     \$sugar_config_si = array (
