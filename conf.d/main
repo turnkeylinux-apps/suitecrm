@@ -93,10 +93,10 @@ echo > $WEBROOT/install.log
 echo > $WEBROOT/suitecrm.log
 
 # tweak permissions from https://docs.suitecrm.com/admin/installation-guide/downloading-installing/
-sudo chown -R www-data:www-data $WEBROOT
-sudo chmod -R 755 $WEBROOT
-sudo chmod -R 775 $WEBROOT/cache $WEBROOT/custom $WEBROOT/modules $WEBROOT/themes $WEBROOT/data $WEBROOT/upload
-sudo chmod 775 $WEBROOT/config_override.php 2>/dev/null
+chown -R www-data:www-data $WEBROOT
+chmod -R 755 $WEBROOT
+chmod -R 775 $WEBROOT/cache $WEBROOT/custom $WEBROOT/modules $WEBROOT/themes $WEBROOT/data $WEBROOT/upload
+chmod 775 $WEBROOT/config_override.php 2>/dev/null
 
 # setup cron
 CRON_SUITECRM=/etc/cron.hourly/suitecrm
