@@ -11,9 +11,9 @@ SRC=/usr/local/src
 WEBROOT=/var/www/suitecrm
 
 # unpack and configure
-unzip $SRC/S*.zip -d $SRC
-rm $SRC/S*.zip
-mv $SRC/SuiteCRM* $WEBROOT
+unzip $SRC/suitecrm-7-12-12.zip -d $SRC
+rm $SRC/suitecrm-7-12-12.zip
+mv $SRC/SuiteCRM-7.12.12 $WEBROOT
 chown -R root:root $WEBROOT
 
 mkdir -p $WEBROOT/cache
