@@ -42,7 +42,7 @@ mysql --user=root --password= --batch --execute "CREATE DATABASE $DB_NAME; GRANT
 
 # Running the CLI installer from https://docs.suitecrm.com/8.x/admin/installation-guide/running-the-cli-installer/
 # ./bin/console suitecrm:app:install -u "admin_username" -p "admin_password" -U "db_user" -P "db_password" -H "db_host" -N "db_name" -S "site_url" -d "demo_data"
-$WEBROOT/bin/console suitecrm:app:install -u "admin" -p "admin" -U "root" -P $MYSQL_PASS -H "localhost" -N $DB_NAME -d "yes"
+$WEBROOT/bin/console suitecrm:app:install -u "$ADMIN_NAME" -p "$ADMIN_PASS" -U "$DB_USER" -P "$DB_PASS" -H "127.0.0.1" -N "$DB_NAME" -d "no"
 
 # stop services
 service apache2 stop
@@ -61,4 +61,3 @@ cat >$CRON_SUITECRM<<EOF
 su www-data -c "cd /var/www/suitecrm && php -f cron.php > /dev/null 2>&1"
 EOF
 chmod +x $CRON_SUITECRM
-
