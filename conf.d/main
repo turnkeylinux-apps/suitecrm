@@ -12,8 +12,8 @@ WEBROOT=/var/www/suitecrm
 
 # unpack and configure
 mkdir -p $WEBROOT
-unzip $SRC/suitecrm-8-3-1.zip -d $WEBROOT
-rm $SRC/suitecrm-8-3-1.zip
+unzip $SRC/suitecrm-*.zip -d $WEBROOT
+rm $SRC/suitecrm-*.zip
 chown -R www-data:www-data $WEBROOT
 
 # tweak permissions from https://docs.suitecrm.com/8.x/admin/installation-guide/downloading-installing/
@@ -61,3 +61,4 @@ cat >$CRON_SUITECRM<<EOF
 su www-data -c "cd /var/www/suitecrm && php -f cron.php > /dev/null 2>&1"
 EOF
 chmod +x $CRON_SUITECRM
+
