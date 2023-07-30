@@ -23,8 +23,7 @@ find $WEBROOT ! -user www-data -exec chown www-data:www-data {} \;
 chmod +x $WEBROOT/bin/console
 
 # php.ini tweaks
-PHPINI=/etc/php/8.2/apache2/php.ini
-sed -i "s|^memory_limit.*|memory_limit = 256M|" $PHPINI
+PHPINI=/etc/php/?.?/apache2/php.ini
 sed -i "s|^variables_order.*|variables_order = \"EGPCS\"|" $PHPINI
 sed -i "s|^;date.timezone.*|date.timezone = \"UTC\"|" $PHPINI
 
@@ -42,7 +41,7 @@ mysql --user=root --password= --batch --execute "CREATE DATABASE $DB_NAME; GRANT
 
 # Running the CLI installer from https://docs.suitecrm.com/8.x/admin/installation-guide/running-the-cli-installer/
 # ./bin/console suitecrm:app:install -u "admin_username" -p "admin_password" -U "db_user" -P "db_password" -H "db_host" -N "db_name" -S "site_url" -d "demo_data"
-$WEBROOT/bin/console suitecrm:app:install -u "$ADMIN_NAME" -p "$ADMIN_PASS" -U "$DB_USER" -P "$DB_PASS" -H "127.0.0.1" -N "$DB_NAME" -d "no"
+$WEBROOT/bin/console suitecrm:app:install -u "$ADMIN_NAME" -p "$ADMIN_PASS" -U "$DB_USER" -P "$DB_PASS" -H "127.0.0.1" -N "$DB_NAME" -S "www.example.com" -d "no"
 
 # stop services
 service apache2 stop
