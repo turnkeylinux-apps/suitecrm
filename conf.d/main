@@ -57,7 +57,6 @@ cat >$CRON_SUITECRM<<EOF
 #!/bin/bash -e
 # Trigger suitecrm cron
 
-su www-data -c "cd /var/www/suitecrm && php -f cron.php > /dev/null 2>&1"
+su www-data -s /bin/bash -c "cd /var/www/suitecrm && php -f cron.php > /dev/null 2>&1"
 EOF
 chmod +x $CRON_SUITECRM
-
