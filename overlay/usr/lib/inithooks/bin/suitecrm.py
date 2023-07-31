@@ -10,6 +10,7 @@ Option:
 import sys
 import getopt
 import bcrypt
+from hashlib import md5
 
 from libinithooks.dialog_wrapper import Dialog
 from mysqlconf import MySQL
@@ -84,7 +85,9 @@ def main():
                 fob.writelines(new_contents)
 
     salt = bcrypt.gensalt()
-    hash_pass = bcrypt.hashpw(password.encode('utf8'), salt).decode('utf8')
+    # For some weird reason SuiteCRM MD5 hashes the password first?!
+    password_md5 = md5(password.encode()).hexdigest()
+    hash_pass = bcrypt.hashpw(password_md5.encode(), salt).decode()
 
     m = MySQL()
     m.execute('UPDATE suitecrm.users SET user_hash=%s WHERE user_name=\"admin\";', (hash_pass,))
