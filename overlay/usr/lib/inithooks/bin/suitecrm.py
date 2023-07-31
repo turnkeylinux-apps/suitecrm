@@ -11,17 +11,18 @@ import sys
 import getopt
 import hashlib
 
-from dialog_wrapper import Dialog
+from libinithooks.dialog_wrapper import Dialog
 from mysqlconf import MySQL
+
+DEFAULT_DOMAIN="www.example.com"
+
 
 def usage(s=None):
     if s:
         print("Error:", s, file=sys.stderr)
-    print("Syntax: %s [options]" % sys.argv[0], file=sys.stderr)
+    print(f"Syntax: {sys.argv[0]} [options]", file=sys.stderr)
     print(__doc__, file=sys.stderr)
     sys.exit(1)
-
-DEFAULT_DOMAIN="www.example.com"
 
 
 def main():
@@ -86,6 +87,6 @@ def main():
     m = MySQL()
     m.execute('UPDATE suitecrm.users SET user_hash=%s WHERE user_name=\"admin\";', (hash_pass,))
 
+
 if __name__ == "__main__":
     main()
-
