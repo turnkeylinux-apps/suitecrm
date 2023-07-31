@@ -76,8 +76,9 @@ def main():
                         _lchar = char
                     if newline:
                         new_contents.append(newline)
-                    else:
-                        new_contents.append(line)
+                else:
+                    new_contents.append(line)
+
         if new_contents:
             with open(conf, 'w') as fob:
                 fob.writelines(new_contents)
