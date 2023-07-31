@@ -10,6 +10,10 @@ ADMIN_PASS=turnkey
 SRC=/usr/local/src
 WEBROOT=/var/www/suitecrm
 
+# configure turnkey-composer to use WEBROOT as default cwd
+TKL_COMPOSER=/usr/local/bin/turnkey-composer
+sed -i "\|^APP_ROOT_FALLBACK|s|=.*|=$WEBROOT|" $TKL_COMPOSER
+
 # unpack and configure
 mkdir -p $WEBROOT
 unzip $SRC/suitecrm-*.zip -d $WEBROOT
