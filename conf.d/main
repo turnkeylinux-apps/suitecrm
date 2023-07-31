@@ -18,7 +18,6 @@ sed -i "\|^APP_ROOT_FALLBACK|s|=.*|=$WEBROOT|" $TKL_COMPOSER
 mkdir -p $WEBROOT
 unzip $SRC/suitecrm-*.zip -d $WEBROOT
 rm $SRC/suitecrm-*.zip
-chown -R www-data:www-data $WEBROOT
 
 # tweak permissions from https://docs.suitecrm.com/8.x/admin/installation-guide/downloading-installing/
 find $WEBROOT -type d -not -perm 2755 -exec chmod 2755 {} \;
@@ -47,13 +46,18 @@ mysql --user=root --password= --batch --execute "CREATE DATABASE $DB_NAME; GRANT
 # ./bin/console suitecrm:app:install -u "admin_username" -p "admin_password" -U "db_user" -P "db_password" -H "db_host" -N "db_name" -S "site_url" -d "demo_data"
 $WEBROOT/bin/console suitecrm:app:install -u "$ADMIN_NAME" -p "$ADMIN_PASS" -U "$DB_USER" -P "$DB_PASS" -H "127.0.0.1" -N "$DB_NAME" -S "www.example.com" -d "no"
 
-# stop services
-service apache2 stop
-service mysql stop
+# fix buggy .htaccess
+sed -i 's|RewriteBase.*|RewriteBase /legacy|' $WEBROOT/public/legacy/.htaccess
 
 # blank out logs
 echo > $WEBROOT/install.log
 echo > $WEBROOT/suitecrm.log
+
+chown -R www-data:www-data $WEBROOT
+
+# stop services
+service apache2 stop
+service mysql stop
 
 # setup cron
 CRON_SUITECRM=/etc/cron.hourly/suitecrm
