@@ -9,7 +9,7 @@ Option:
 
 import sys
 import getopt
-import hashlib
+import bcrypt
 
 from libinithooks.dialog_wrapper import Dialog
 from mysqlconf import MySQL
@@ -83,7 +83,8 @@ def main():
             with open(conf, 'w') as fob:
                 fob.writelines(new_contents)
 
-    hash_pass = hashlib.md5(password.encode('utf8')).hexdigest()
+    salt = bcrypt.gensalt()
+    hash_pass = bcrypt.hashpw(password.encode('utf8'), salt).decode('utf8')
 
     m = MySQL()
     m.execute('UPDATE suitecrm.users SET user_hash=%s WHERE user_name=\"admin\";', (hash_pass,))
