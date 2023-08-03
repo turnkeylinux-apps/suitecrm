@@ -1,6 +1,6 @@
 turnkey-suitecrm-18.0 (1) turnkey; urgency=low
 
-  * Update SuiteCRM to latest upstream version - v8.4.0.
+  * Install latest upstream version of SuiteCRM: 8.4.0.
 
   * Special thanks to UncleDan (Daniele Lolli - https://github.com/UncleDan)
     for starting work on this (and many other appliances).
@@ -75,13 +75,14 @@ turnkey-suitecrm-18.0 (1) turnkey; urgency=low
     - Improve turnkey-artisan so that it works reliably in cron jobs (only
       Laravel based LAMP apps).
 
- -- Jeremy Davis <jeremy@turnkeylinux.org>  Tue, 26 Sep 2023 03:15:57 +0000
+ -- Daniele Lolli <github@uncledan.it>  Tue, 3 Aug 2023 19:00:00 +0200
 
 turnkey-suitecrm-17.0 (1) UNRELEASED; urgency=low
 
   * NOT RELEASED DUE TO SECURITY CONCERNS WITH UPSTREAM
 
  -- Jeremy Davis <jeremy@turnkeylinux.org>  Tue, 1 Mar 2022 00:00:00 +0000
+
 
 turnkey-suitecrm-16.1 (1) turnkey; urgency=low
 
