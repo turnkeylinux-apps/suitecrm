@@ -14,6 +14,7 @@ from hashlib import md5
 
 from libinithooks.dialog_wrapper import Dialog
 from mysqlconf import MySQL
+import subprocess
 
 DEFAULT_DOMAIN="www.example.com"
 
@@ -84,10 +85,12 @@ def main():
             with open(conf, 'w') as fob:
                 fob.writelines(new_contents)
 
-    salt = bcrypt.gensalt()
     # For some weird reason SuiteCRM MD5 hashes the password first?!
     password_md5 = md5(password.encode()).hexdigest()
-    hash_pass = bcrypt.hashpw(password_md5.encode(), salt).decode()
+    hash_pass = subprocess.run([
+        'php', '-r', f'print(password_hash($argv[1], PASSWORD_BCRYPT));',
+        password_md5
+    ], capture_output=True).stdout
 
     m = MySQL()
     m.execute('UPDATE suitecrm.users SET user_hash=%s WHERE user_name=\"admin\";', (hash_pass,))
