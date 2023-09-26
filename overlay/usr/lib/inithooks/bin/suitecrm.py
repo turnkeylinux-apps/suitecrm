@@ -9,19 +9,22 @@ Option:
 
 import sys
 import getopt
-import hashlib
+import bcrypt
+from hashlib import md5
 
-from dialog_wrapper import Dialog
+from libinithooks.dialog_wrapper import Dialog
 from mysqlconf import MySQL
+import subprocess
+
+DEFAULT_DOMAIN="www.example.com"
+
 
 def usage(s=None):
     if s:
         print("Error:", s, file=sys.stderr)
-    print("Syntax: %s [options]" % sys.argv[0], file=sys.stderr)
+    print(f"Syntax: {sys.argv[0]} [options]", file=sys.stderr)
     print(__doc__, file=sys.stderr)
     sys.exit(1)
-
-DEFAULT_DOMAIN="www.example.com"
 
 
 def main():
@@ -59,17 +62,39 @@ def main():
     if domain == "DEFAULT":
         domain = DEFAULT_DOMAIN
 
-    with open('/var/www/suitecrm/config.php', 'r') as fob:
-        filedata = fob.read()
-        filedata = filedata.replace('http://127.0.0.1', domain)
-    with open('/var/www/suitecrm/config.php', 'w') as fob:
-        fob.write(filedata)
+    for conf in ['config.php', 'config_si.php']:
+        conf = f'/var/www/suitecrm/public/legacy/{conf}'
+        with open(conf, 'r') as fob:
+            new_contents = []
+            for line in fob:
+                newline = ''
+                if 'site_url' in line:
+                    _lchar = ''
+                    for char in line:
+                        newline = f"{newline}{char}"
+                        if _lchar == '=' and char == '>':
+                            newline = f"{newline} '{domain}',\n"
+                            break
+                        _lchar = char
+                    if newline:
+                        new_contents.append(newline)
+                else:
+                    new_contents.append(line)
 
-    hash_pass = hashlib.md5(password.encode('utf8')).hexdigest()
+        if new_contents:
+            with open(conf, 'w') as fob:
+                fob.writelines(new_contents)
+
+    # For some weird reason SuiteCRM MD5 hashes the password first?!
+    password_md5 = md5(password.encode()).hexdigest()
+    hash_pass = subprocess.run([
+        'php', '-r', f'print(password_hash($argv[1], PASSWORD_BCRYPT));',
+        password_md5
+    ], capture_output=True).stdout
 
     m = MySQL()
     m.execute('UPDATE suitecrm.users SET user_hash=%s WHERE user_name=\"admin\";', (hash_pass,))
 
+
 if __name__ == "__main__":
     main()
-

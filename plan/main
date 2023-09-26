@@ -9,6 +9,8 @@ php-xml
 php-mbstring
 php-zip
 
+python3-bcrypt
+
 unzip
 uuid-runtime
 

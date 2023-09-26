@@ -10,25 +10,23 @@ ADMIN_PASS=turnkey
 SRC=/usr/local/src
 WEBROOT=/var/www/suitecrm
 
+# configure turnkey-composer to use WEBROOT as default cwd
+TKL_COMPOSER=/usr/local/bin/turnkey-composer
+sed -i "\|^APP_ROOT_FALLBACK|s|=.*|=$WEBROOT|" $TKL_COMPOSER
+
 # unpack and configure
-unzip $SRC/S*.zip -d $SRC
-rm $SRC/S*.zip
-mv $SRC/SuiteCRM* $WEBROOT
-chown -R root:root $WEBROOT
+mkdir -p $WEBROOT
+unzip $SRC/suitecrm-*.zip -d $WEBROOT
+rm $SRC/suitecrm-*.zip
 
-mkdir -p $WEBROOT/cache
-
-for i in install.log config.php config_override.php sugarcrm.log suitecrm.log .htaccess; do
-    touch $WEBROOT/$i
-done
-
-for i in cache custom modules upload config.php sugarcrm.log suitecrm.log install.log config_override.php .htaccess; do
-    chown -R www-data:www-data $WEBROOT/$i
-done
+# tweak permissions from https://docs.suitecrm.com/8.x/admin/installation-guide/downloading-installing/
+find $WEBROOT -type d -not -perm 2755 -exec chmod 2755 {} \;
+find $WEBROOT -type f -not -perm 0644 -exec chmod 0644 {} \;
+find $WEBROOT ! -user www-data -exec chown www-data:www-data {} \;
+chmod +x $WEBROOT/bin/console
 
 # php.ini tweaks
-PHPINI=/etc/php/7.3/apache2/php.ini
-sed -i "s|^memory_limit.*|memory_limit = 256M|" $PHPINI
+PHPINI=/etc/php/?.?/apache2/php.ini
 sed -i "s|^variables_order.*|variables_order = \"EGPCS\"|" $PHPINI
 sed -i "s|^;date.timezone.*|date.timezone = \"UTC\"|" $PHPINI
 
@@ -41,60 +39,25 @@ a2enmod rewrite
 service mysql start
 service apache2 start
 
-cat << EOF > $WEBROOT/config_si.php
-<?php
-    \$sugar_config_si = array (
-        'default_currency_iso4217' => 'USD',
-        'default_currency_name' => 'US Dollars',
-        'default_currency_significant_digits' => '2',
-        'default_currency_symbol' => '$',
-        'default_date_format' => 'Y-m-d',
-        'default_decimal_seperator' => '.',
-        'default_export_charset' => 'ISO-8859-1',
-        'default_language' => 'en_us',
-        'default_locale_name_format' => 's f l',
-        'default_number_grouping_seperator'    => ',',
-        'default_time_format' => 'H:i',
-        'export_delimiter' => ',',
-        'setup_db_admin_password' => '$DB_PASS', // DATABASE ADMIN USER PASSWORD
-        'setup_db_admin_user_name' => '$DB_USER', // DATABASE ADMIN USER NAME
-        'setup_db_create_database' => '1', // CREATE THE DATABASE IF IT DOESN'T EXIST
-        'setup_db_drop_tables' => '1', // DROP THE TABLES IF THEY EXIST
-        'setup_db_sugarsales_password' => '$DB_PASS', // THE DATABASE PASSWORD TO USE AFTER INSTALLATION TO CONNECT
-        'setup_db_sugarsales_password_retype' => '$DB_PASS', // AGAIN
-        'setup_db_sugarsales_user' => '$DB_USER', // THE DATABASE USER TO USE AFTER INSTALLATION TO CONNECT
-        'setup_db_type' => 'mysql', // OR OTHER DATABASE TYPE (ibm_db2, etc)
-        'setup_db_host_name' => 'localhost', // DATABASE HOST LOCATION
-        'setup_db_port_num' => '3306', // DATABASE PORT
-        'setup_db_create_sugarsales_user' => 1, // CREATE THE DATABASE USER TO USE AFTER INSTALLATION
-        'setup_db_database_name' => '$DB_NAME', // THE DATABASE NAME
-        'setup_db_pop_demo_data' => 0, // (0 or 1) POPULATE DEMO DATA
-        'dbUSRData' => 'same',
-        'demoData' => 'no', // (yes or no) POPULATE DEMO DATA
-        'setup_site_admin_user_name'=> '$ADMIN_NAME', // SUGAR ADMIN USER NAME
-        'setup_site_admin_password' => '$ADMIN_PASS', // SUGAR ADMIN PASSWORD
-	'setup_site_admin_email' => 'admin@example.com',
-        'setup_site_url' => 'http://127.0.0.1/', // PATH TO SUGAR INSTANCE VIA URL
-        'setup_system_name' => 'TurnKey SuiteCRM' // INSTANCE NAME
-    );
-EOF
+# create database
+mysql --user=root --password= --batch --execute "CREATE DATABASE $DB_NAME; GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,ALTER ON $DB_NAME.* TO $DB_USER@localhost IDENTIFIED BY '$DB_PASS'; FLUSH PRIVILEGES;"
 
-mysql --user=root --password=$MYSQL_PASS --batch --execute "CREATE DATABASE $DB_NAME; GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,ALTER ON $DB_NAME.* TO $DB_USER@localhost IDENTIFIED BY '$DB_PASS'; FLUSH PRIVILEGES;"
-curl 'http://127.0.0.1/install.php' --data 'goto=SilentInstall&cli=true'
-mysql --user=root --password=$MYSQL_PASS --batch --execute "UPDATE suitecrm.outbound_email SET mail_smtpserver = '127.0.0.1', mail_smtpauth_req = 0 WHERE name = 'system';"
-rm -f $WEBROOT/config_si.php
+# Running the CLI installer from https://docs.suitecrm.com/8.x/admin/installation-guide/running-the-cli-installer/
+# ./bin/console suitecrm:app:install -u "admin_username" -p "admin_password" -U "db_user" -P "db_password" -H "db_host" -N "db_name" -S "site_url" -d "demo_data"
+$WEBROOT/bin/console suitecrm:app:install -u "$ADMIN_NAME" -p "$ADMIN_PASS" -U "$DB_USER" -P "$DB_PASS" -H "127.0.0.1" -N "$DB_NAME" -S "www.example.com" -d "no"
 
-# stop services
-service apache2 stop
-service mysql stop
+# fix buggy .htaccess
+sed -i 's|RewriteBase.*|RewriteBase /legacy|' $WEBROOT/public/legacy/.htaccess
 
 # blank out logs
 echo > $WEBROOT/install.log
 echo > $WEBROOT/suitecrm.log
 
-# tweak permissions
-chown root:root $WEBROOT/.htaccess
-chmod 640 $WEBROOT/config.php
+chown -R www-data:www-data $WEBROOT
+
+# stop services
+service apache2 stop
+service mysql stop
 
 # setup cron
 CRON_SUITECRM=/etc/cron.hourly/suitecrm
@@ -102,7 +65,6 @@ cat >$CRON_SUITECRM<<EOF
 #!/bin/bash -e
 # Trigger suitecrm cron
 
-su www-data -c "cd /var/www/suitecrm && php -f cron.php > /dev/null 2>&1"
+su www-data -s /bin/bash -c "cd /var/www/suitecrm && php -f cron.php > /dev/null 2>&1"
 EOF
 chmod +x $CRON_SUITECRM
-
