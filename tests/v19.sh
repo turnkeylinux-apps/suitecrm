@@ -3,6 +3,7 @@
 set -euo pipefail
 
 : "${TKL_TEST_RESULT:?TKL_TEST_RESULT must name the result file}"
+: "${TKL_TEST_APP_PASS:?TKL_TEST_APP_PASS must contain the firstboot app password}"
 
 WEBROOT=/var/www/suitecrm
 tmp=$(mktemp -d /tmp/suitecrm-v19-test.XXXXXXXX)
@@ -36,13 +37,6 @@ configured_site_url=$(runuser -u www-data -- php -r \
     "$WEBROOT/public/legacy/config.php")
 [[ "$configured_site_url" =~ ^https://[A-Za-z0-9.-]+$ ]]
 
-admin_pass=$(cat /proc/sys/kernel/random/uuid)
-admin_md5=$(printf '%s' "$admin_pass" | md5sum | cut -d ' ' -f 1)
-admin_hash=$(php -r \
-    'print(password_hash($argv[1], PASSWORD_BCRYPT));' "$admin_md5")
-mariadb suitecrm --execute \
-    "UPDATE users SET user_hash='$admin_hash' WHERE user_name='admin';"
-unset admin_md5 admin_hash
 grep -q '^DATABASE_URL=' "$WEBROOT/.env.local"
 grep -Eq '^APP_SECRET=.+$' "$WEBROOT/.env.local"
 
@@ -84,7 +78,7 @@ curl --fail --silent --show-error --noproxy '*' \
     --cookie "$tmp/cookies" --cookie-jar "$tmp/cookies" \
     --header 'Content-Type: application/json' \
     --header "X-XSRF-TOKEN: $xsrf" \
-    --data-binary "{\"username\":\"admin\",\"password\":\"$admin_pass\"}" \
+    --data-binary "{\"username\":\"admin\",\"password\":\"$TKL_TEST_APP_PASS\"}" \
     --output "$tmp/login.json" "$BASE_URL/login"
 grep -q '"login_success": "true"' "$tmp/login.json"
 
@@ -138,6 +132,9 @@ if (!$record || !$record->id) {
 }
 $record->mark_deleted($record->id);
 PHP
+db_count=$(mariadb --batch --skip-column-names suitecrm \
+    --execute "SELECT COUNT(*) FROM accounts WHERE id='$record_id' AND deleted=1;")
+test "$db_count" = 1
 
 runuser -u www-data -- "$WEBROOT/bin/console" schedulers:run \
     > "$tmp/scheduler.log"
