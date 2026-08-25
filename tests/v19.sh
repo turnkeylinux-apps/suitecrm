@@ -1,9 +1,10 @@
-#!/bin/bash -e
+#!/bin/bash
+
+set -euo pipefail
 
 : "${TKL_TEST_RESULT:?TKL_TEST_RESULT must name the result file}"
 
 WEBROOT=/var/www/suitecrm
-BASE_URL=https://www.example.com
 tmp=$(mktemp -d /tmp/suitecrm-v19-test.XXXXXXXX)
 cleanup() {
     rm -rf -- "$tmp"
@@ -16,27 +17,42 @@ systemctl is-active --quiet apache2
 systemctl is-active --quiet mariadb
 systemctl is-active --quiet cron
 
+openssl s_client -connect 127.0.0.1:443 -servername localhost \
+    -showcerts </dev/null 2>/dev/null \
+    | openssl x509 -outform PEM > "$tmp/server.pem"
+openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt "$tmp/server.pem"
+tls_name=$({ openssl x509 -in "$tmp/server.pem" -noout \
+    -ext subjectAltName || true; } \
+    | tr ',' '\n' | sed -n 's/^[[:space:]]*DNS://p' | sed -n '1p')
+if [ -z "$tls_name" ]; then
+    tls_name=$(openssl x509 -in "$tmp/server.pem" -noout \
+        -subject -nameopt RFC2253 \
+        | sed -n 's/^subject=.*CN=\([^,]*\).*$/\1/p')
+fi
+[[ "$tls_name" =~ ^[A-Za-z0-9.-]+$ ]]
+BASE_URL="https://$tls_name"
+
 admin_pass=$(cat /proc/sys/kernel/random/uuid)
-/usr/lib/inithooks/bin/suitecrm.py \
-    --pass="$admin_pass" --domain=www.example.com
+/usr/lib/inithooks/bin/suitecrm.py --pass="$admin_pass" --domain="$tls_name"
 grep -q '^DATABASE_URL=' "$WEBROOT/.env.local"
 grep -Eq '^APP_SECRET=.+$' "$WEBROOT/.env.local"
 
 curl --fail --silent --show-error --noproxy '*' \
-    --resolve www.example.com:443:127.0.0.1 \
+    --resolve "$tls_name:443:127.0.0.1" \
     --cookie-jar "$tmp/cookies" --output "$tmp/index.html" "$BASE_URL/"
 grep -q 'SuiteCRM' "$tmp/index.html"
-asset=$(grep -o 'src="dist/[^"]*\.js"' "$tmp/index.html" | head -n 1 | cut -d '"' -f 2)
+asset=$(grep -o 'src="dist/[^"]*\.js"' "$tmp/index.html" \
+    | sed -n '1p' | cut -d '"' -f 2)
 test -n "$asset"
 curl --fail --silent --show-error --noproxy '*' \
-    --resolve www.example.com:443:127.0.0.1 \
+    --resolve "$tls_name:443:127.0.0.1" \
     --output "$tmp/asset.js" "$BASE_URL/$asset"
 test "$(stat --format %s "$tmp/asset.js")" -gt 10000
 
 xsrf=$(awk '$6 == "XSRF-TOKEN" { print $7 }' "$tmp/cookies" | tail -n 1)
 test -n "$xsrf"
 curl --fail --silent --show-error --noproxy '*' \
-    --resolve www.example.com:443:127.0.0.1 \
+    --resolve "$tls_name:443:127.0.0.1" \
     --cookie "$tmp/cookies" --cookie-jar "$tmp/cookies" \
     --header 'Content-Type: application/json' \
     --header "X-XSRF-TOKEN: $xsrf" \
@@ -45,7 +61,7 @@ curl --fail --silent --show-error --noproxy '*' \
 grep -q '"login_success": "true"' "$tmp/login.json"
 
 curl --fail --silent --show-error --noproxy '*' \
-    --resolve www.example.com:443:127.0.0.1 \
+    --resolve "$tls_name:443:127.0.0.1" \
     --cookie "$tmp/cookies" --output "$tmp/session.json" \
     "$BASE_URL/session-status"
 grep -q '"active":true' "$tmp/session.json"
