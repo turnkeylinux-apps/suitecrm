@@ -62,6 +62,8 @@ def main():
     if domain == "DEFAULT":
         domain = DEFAULT_DOMAIN
 
+    site_url = f"https://{domain}"
+
     for conf in ['config.php', 'config_si.php']:
         conf = f'/var/www/suitecrm/public/legacy/{conf}'
         with open(conf, 'r') as fob:
@@ -73,7 +75,7 @@ def main():
                     for char in line:
                         newline = f"{newline}{char}"
                         if _lchar == '=' and char == '>':
-                            newline = f"{newline} '{domain}',\n"
+                            newline = f"{newline} '{site_url}',\n"
                             break
                         _lchar = char
                     if newline:
