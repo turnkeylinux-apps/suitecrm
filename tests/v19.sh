@@ -32,12 +32,13 @@ fi
 [[ "$tls_name" =~ ^[A-Za-z0-9.-]+$ ]]
 BASE_URL="https://$tls_name"
 
-set +u
-. /etc/inithooks.conf
-set -u
-: "${APP_PASS:?first-boot SuiteCRM password is missing}"
-admin_pass=$APP_PASS
-unset APP_PASS
+admin_pass=$(cat /proc/sys/kernel/random/uuid)
+admin_md5=$(printf '%s' "$admin_pass" | md5sum | cut -d ' ' -f 1)
+admin_hash=$(php -r \
+    'print(password_hash($argv[1], PASSWORD_BCRYPT));' "$admin_md5")
+mariadb suitecrm --execute \
+    "UPDATE users SET user_hash='$admin_hash' WHERE user_name='admin';"
+unset admin_md5 admin_hash
 grep -q '^DATABASE_URL=' "$WEBROOT/.env.local"
 grep -Eq '^APP_SECRET=.+$' "$WEBROOT/.env.local"
 
