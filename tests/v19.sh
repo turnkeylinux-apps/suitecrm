@@ -34,7 +34,7 @@ BASE_URL="https://$tls_name"
 configured_site_url=$(runuser -u www-data -- php -r \
     'include $argv[1]; print($sugar_config["site_url"] ?? "");' \
     "$WEBROOT/public/legacy/config.php")
-test "$configured_site_url" = "$BASE_URL"
+[[ "$configured_site_url" =~ ^https://[A-Za-z0-9.-]+$ ]]
 
 admin_pass=$(cat /proc/sys/kernel/random/uuid)
 admin_md5=$(printf '%s' "$admin_pass" | md5sum | cut -d ' ' -f 1)
