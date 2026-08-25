@@ -42,9 +42,28 @@ unset admin_md5 admin_hash
 grep -q '^DATABASE_URL=' "$WEBROOT/.env.local"
 grep -Eq '^APP_SECRET=.+$' "$WEBROOT/.env.local"
 
-curl --fail --silent --show-error --noproxy '*' \
+root_status=$(curl --silent --show-error --noproxy '*' \
     --resolve "$tls_name:443:127.0.0.1" \
-    --cookie-jar "$tmp/cookies" --output "$tmp/index.html" "$BASE_URL/"
+    --cookie-jar "$tmp/cookies" --output "$tmp/index.html" \
+    --write-out '%{http_code}' "$BASE_URL/")
+if [ "$root_status" != 200 ]; then
+    echo "SuiteCRM root returned HTTP $root_status" >&2
+    stat --format '%U:%G %a %n' \
+        "$WEBROOT/.env.local" "$WEBROOT/cache" "$WEBROOT/logs" \
+        "$WEBROOT/public/legacy/config.php" >&2 || true
+    for log in "$WEBROOT/logs/prod/prod.log" /var/log/apache2/error.log; do
+        if [ -f "$log" ]; then
+            echo "Relevant errors from $log:" >&2
+            grep -Ei 'CRITICAL|ERROR|Fatal|Uncaught|Exception|SQLSTATE|Permission denied' \
+                "$log" | tail -n 40 \
+                | sed -E \
+                    -e 's#(mysql://[^:[:space:]]+:)[^@[:space:]]+@#\1[REDACTED]@#g' \
+                    -e 's#((password|passwd|token|secret)[^:=,;}]*[:=])[[:space:]]*[^,;}[:space:]]+#\1[REDACTED]#Ig' \
+                >&2 || true
+        fi
+    done
+    exit 1
+fi
 grep -q 'SuiteCRM' "$tmp/index.html"
 asset=$(grep -o 'src="dist/[^"]*\.js"' "$tmp/index.html" \
     | sed -n '1p' | cut -d '"' -f 2)
