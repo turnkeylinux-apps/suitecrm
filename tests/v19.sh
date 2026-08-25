@@ -32,8 +32,12 @@ fi
 [[ "$tls_name" =~ ^[A-Za-z0-9.-]+$ ]]
 BASE_URL="https://$tls_name"
 
-admin_pass=$(cat /proc/sys/kernel/random/uuid)
-/usr/lib/inithooks/bin/suitecrm.py --pass="$admin_pass" --domain="$tls_name"
+set +u
+. /etc/inithooks.conf
+set -u
+: "${APP_PASS:?first-boot SuiteCRM password is missing}"
+admin_pass=$APP_PASS
+unset APP_PASS
 grep -q '^DATABASE_URL=' "$WEBROOT/.env.local"
 grep -Eq '^APP_SECRET=.+$' "$WEBROOT/.env.local"
 
