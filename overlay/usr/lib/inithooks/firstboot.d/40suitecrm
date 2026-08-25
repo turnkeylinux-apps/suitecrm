@@ -5,3 +5,7 @@
 
 [ -e $INITHOOKS_CONF ] && . $INITHOOKS_CONF
 $INITHOOKS_PATH/bin/suitecrm.py --pass="$APP_PASS" --domain="$APP_DOMAIN"
+
+# mysqlconf stops a database service that it had to start for the update.
+# SuiteCRM needs MariaDB available as soon as first boot completes.
+systemctl start mariadb
