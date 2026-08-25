@@ -90,10 +90,11 @@ def main():
     hash_pass = subprocess.run([
         'php', '-r', f'print(password_hash($argv[1], PASSWORD_BCRYPT));',
         password_md5
-    ], capture_output=True).stdout
+    ], check=True, capture_output=True, text=True).stdout
 
     m = MySQL()
-    m.execute('UPDATE suitecrm.users SET user_hash=%s WHERE user_name=\"admin\";', (hash_pass,))
+    m.execute('UPDATE suitecrm.users SET user_hash=%s WHERE user_name=\"admin\";',
+              (hash_pass,))
 
 
 if __name__ == "__main__":

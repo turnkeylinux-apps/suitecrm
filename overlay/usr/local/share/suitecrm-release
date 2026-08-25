@@ -1,0 +1,4 @@
+version=8.10.2
+channel=stable
+url=https://github.com/SuiteCRM/SuiteCRM-Core/releases/download/v8.10.2/SuiteCRM-8.10.2.zip
+sha256=ac4693d10ea2d6cd20b3256098781d134599d88878fb24e8dc127038d624f5a8

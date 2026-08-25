@@ -4,13 +4,13 @@
 php-gd
 php-cli
 php-curl
-php-imap
 php-xml
 php-mbstring
 php-zip
+php-intl
+php-soap
 
 python3-bcrypt
 
 unzip
 uuid-runtime
-

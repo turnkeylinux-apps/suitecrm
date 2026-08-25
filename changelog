@@ -1,3 +1,19 @@
+turnkey-suitecrm-19.0 (1) turnkey; urgency=low
+
+  * Install the official SuiteCRM 8.10.2 production release with its pinned
+    SHA-256 digest.
+
+  * Add a supervised updater for the official stable release channel.
+
+  * Use the SuiteCRM 8 scheduler command and add PHP modules required by the
+    supported upstream runtime on Debian Trixie.
+
+  * Preserve and regenerate application secrets during first boot.
+
+  * Upgrade the base distribution to Debian 13/Trixie.
+
+ -- TurnKey Linux Team <admin@turnkeylinux.org>  Tue, 25 Aug 2026 00:00:00 +0000
+
 turnkey-suitecrm-18.0 (1) turnkey; urgency=low
 
   * Install latest upstream version of SuiteCRM: 8.4.0.
@@ -192,4 +208,3 @@ turnkey-suitecrm-14.0 (1) turnkey; urgency=low
     appliances. Here we only describe changes specific to this appliance.
 
  -- Jeremy Davis <jeremy@turnkeylinux.org>  Fri, 19 Jun 2015 11:30:15 +1000
-
