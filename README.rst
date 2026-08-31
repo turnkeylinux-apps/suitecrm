@@ -17,14 +17,18 @@ and on top of that:
 
 - SuiteCRM configurations:
    
-   - Installed from upstream source code to /var/www/suitecrm
-   - Includes cronjob to trigger SuiteCRM cron tasks.
+   - SuiteCRM 8.10.2 is installed from the official upstream release archive
+     in /var/www/suitecrm.
+   - Includes a cron job that runs the supported SuiteCRM scheduler every
+     minute.
+   - ``suitecrm-update --check`` checks the official stable release channel
+     and verifies its published SHA-256 digest. Use
+     ``suitecrm-update --apply`` for a supervised update.
    - Web-folder permissions can be configured via confconsole:
          System settings > Suitecrm permissions
 
-   **Security note**: Updates to SuiteCRM may require supervision so
-   they **ARE NOT** configured to install automatically. See `SuiteCRM
-   documentation`_ for upgrading.
+   **Security note**: Updates to SuiteCRM require supervision and are not
+   installed automatically. See `SuiteCRM documentation`_ for upgrading.
 
 - SSL support out of the box.
 - `Adminer`_ administration frontend for MySQL (listening on port

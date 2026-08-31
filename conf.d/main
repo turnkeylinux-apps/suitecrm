@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/bash -e
 
 DB_NAME=suitecrm
 DB_USER=suitecrm
@@ -9,26 +9,32 @@ ADMIN_PASS=turnkey
 
 SRC=/usr/local/src
 WEBROOT=/var/www/suitecrm
+VERSION=$(sed -n 's/^version=//p' /usr/local/share/suitecrm-release)
+ARCHIVE="$SRC/SuiteCRM-$VERSION.zip"
 
 # configure turnkey-composer to use WEBROOT as default cwd
 TKL_COMPOSER=/usr/local/bin/turnkey-composer
-sed -i "\|^APP_ROOT_FALLBACK|s|=.*|=$WEBROOT|" $TKL_COMPOSER
+sed -i "\|^APP_ROOT_FALLBACK|s|=.*|=$WEBROOT|" "$TKL_COMPOSER"
 
 # unpack and configure
-mkdir -p $WEBROOT
-unzip $SRC/suitecrm-*.zip -d $WEBROOT
-rm $SRC/suitecrm-*.zip
+mkdir -p "$WEBROOT"
+unzip -q "$ARCHIVE" -d "$WEBROOT"
+rm "$ARCHIVE"
+test "$(tr -d '[:space:]' < "$WEBROOT/VERSION")" = "$VERSION"
 
 # tweak permissions from https://docs.suitecrm.com/8.x/admin/installation-guide/downloading-installing/
-find $WEBROOT -type d -not -perm 2755 -exec chmod 2755 {} \;
-find $WEBROOT -type f -not -perm 0644 -exec chmod 0644 {} \;
-find $WEBROOT ! -user www-data -exec chown www-data:www-data {} \;
-chmod +x $WEBROOT/bin/console
+find "$WEBROOT" -type d -not -perm 2755 -exec chmod 2755 {} \;
+find "$WEBROOT" -type f -not -perm 0644 -exec chmod 0644 {} \;
+find "$WEBROOT" ! -user www-data -exec chown www-data:www-data {} \;
+chmod +x "$WEBROOT/bin/console"
 
 # php.ini tweaks
-PHPINI=/etc/php/?.?/apache2/php.ini
-sed -i "s|^variables_order.*|variables_order = \"EGPCS\"|" $PHPINI
-sed -i "s|^;date.timezone.*|date.timezone = \"UTC\"|" $PHPINI
+for PHPINI in /etc/php/*/apache2/php.ini /etc/php/*/cli/php.ini; do
+    sed -i 's|^variables_order.*|variables_order = "EGPCS"|' "$PHPINI"
+    sed -i 's|^;date.timezone.*|date.timezone = "UTC"|' "$PHPINI"
+    sed -i 's|^upload_max_filesize.*|upload_max_filesize = 64M|' "$PHPINI"
+    sed -i 's|^post_max_size.*|post_max_size = 64M|' "$PHPINI"
+done
 
 # configure apache
 a2dissite 000-default
@@ -39,32 +45,41 @@ a2enmod rewrite
 service mysql start
 service apache2 start
 
-# create database
-mysql --user=root --password= --batch --execute "CREATE DATABASE $DB_NAME; GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,ALTER ON $DB_NAME.* TO $DB_USER@localhost IDENTIFIED BY '$DB_PASS'; FLUSH PRIVILEGES;"
+# Create the database without exposing the generated password in build logs.
+mysql --user=root --batch <<EOF
+CREATE DATABASE \`$DB_NAME\`;
+CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
+GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'localhost';
+FLUSH PRIVILEGES;
+EOF
 
 # Running the CLI installer from https://docs.suitecrm.com/8.x/admin/installation-guide/running-the-cli-installer/
 # ./bin/console suitecrm:app:install -u "admin_username" -p "admin_password" -U "db_user" -P "db_password" -H "db_host" -N "db_name" -S "site_url" -d "demo_data"
-$WEBROOT/bin/console suitecrm:app:install -u "$ADMIN_NAME" -p "$ADMIN_PASS" -U "$DB_USER" -P "$DB_PASS" -H "127.0.0.1" -N "$DB_NAME" -S "www.example.com" -d "no"
+runuser -u www-data -- "$WEBROOT/bin/console" suitecrm:app:install \
+    -u "$ADMIN_NAME" -p "$ADMIN_PASS" \
+    -U "$DB_USER" -P "$DB_PASS" -H 127.0.0.1 -N "$DB_NAME" \
+    -S "https://www.example.com" -d no
 
 # fix buggy .htaccess
-sed -i 's|RewriteBase.*|RewriteBase /legacy|' $WEBROOT/public/legacy/.htaccess
+sed -i 's|RewriteBase.*|RewriteBase /legacy|' "$WEBROOT/public/legacy/.htaccess"
 
 # blank out logs
-echo > $WEBROOT/install.log
-echo > $WEBROOT/suitecrm.log
+find "$WEBROOT/logs" -type f -name '*.log' -exec truncate --size 0 {} +
+find "$WEBROOT/public/legacy" -maxdepth 1 -type f -name '*.log' \
+    -exec truncate --size 0 {} +
 
-chown -R www-data:www-data $WEBROOT
+chown -R www-data:www-data "$WEBROOT"
 
 # stop services
 service apache2 stop
 service mysql stop
 
-# setup cron
-CRON_SUITECRM=/etc/cron.hourly/suitecrm
-cat >$CRON_SUITECRM<<EOF
-#!/bin/bash -e
-# Trigger suitecrm cron
+# Configure the supported SuiteCRM 8.9 and later scheduler entry point.
+CRON_SUITECRM=/etc/cron.d/suitecrm
+cat > "$CRON_SUITECRM" <<'EOF'
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-su www-data -s /bin/bash -c "cd /var/www/suitecrm && php -f cron.php > /dev/null 2>&1"
+* * * * * www-data /usr/bin/php /var/www/suitecrm/bin/console schedulers:run >/dev/null 2>&1
 EOF
-chmod +x $CRON_SUITECRM
+chmod 0644 "$CRON_SUITECRM"

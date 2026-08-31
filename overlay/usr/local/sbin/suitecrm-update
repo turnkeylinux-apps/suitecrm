@@ -1,0 +1,129 @@
+#!/bin/bash -e
+
+WEBROOT=/var/www/suitecrm
+RELEASE_FILE=/usr/local/share/suitecrm-release
+API_URL=https://api.github.com/repos/SuiteCRM/SuiteCRM-Core/releases/latest
+
+usage() {
+    echo "Usage: $0 --check|--apply" >&2
+    exit 2
+}
+
+[ "$#" -eq 1 ] || usage
+case "$1" in
+    --check|--apply) action=$1 ;;
+    *) usage ;;
+esac
+
+installed=$(tr -d '[:space:]' < "$WEBROOT/VERSION")
+pinned=$(sed -n 's/^version=//p' "$RELEASE_FILE")
+pinned_url=$(sed -n 's/^url=//p' "$RELEASE_FILE")
+pinned_sha=$(sed -n 's/^sha256=//p' "$RELEASE_FILE")
+test -n "$installed"
+test -n "$pinned"
+test -n "$pinned_url"
+test "${#pinned_sha}" -eq 64
+
+tmp=$(mktemp -d /tmp/suitecrm-update.XXXXXXXX)
+cleanup() {
+    rm -rf -- "$tmp"
+}
+trap cleanup EXIT HUP INT TERM
+
+curl --fail --silent --show-error --location \
+    --header 'Accept: application/vnd.github+json' \
+    --header 'User-Agent: turnkey-suitecrm-updater' \
+    --output "$tmp/release.json" "$API_URL"
+
+python3 - "$tmp/release.json" > "$tmp/latest" <<'PY'
+import json
+import re
+import sys
+
+with open(sys.argv[1], encoding='utf-8') as release_file:
+    release = json.load(release_file)
+
+tag = release.get('tag_name', '')
+if release.get('draft') or release.get('prerelease'):
+    raise SystemExit('latest release is not stable')
+if not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', tag):
+    raise SystemExit('invalid stable release tag')
+
+version = tag[1:]
+name = f'SuiteCRM-{version}.zip'
+assets = [asset for asset in release.get('assets', [])
+          if asset.get('name') == name]
+if len(assets) != 1:
+    raise SystemExit('official production asset is missing or ambiguous')
+
+asset = assets[0]
+url = asset.get('browser_download_url', '')
+digest = asset.get('digest', '')
+expected_url = (
+    'https://github.com/SuiteCRM/SuiteCRM-Core/releases/download/'
+    f'v{version}/{name}'
+)
+if url != expected_url:
+    raise SystemExit('official asset URL does not match the release tag')
+if not re.fullmatch(r'sha256:[0-9a-f]{64}', digest):
+    raise SystemExit('official asset is missing a SHA-256 digest')
+
+print(version)
+print(url)
+print(digest.removeprefix('sha256:'))
+PY
+
+mapfile -t latest < "$tmp/latest"
+latest_version=${latest[0]}
+latest_url=${latest[1]}
+latest_sha=${latest[2]}
+
+if dpkg --compare-versions "$installed" eq "$latest_version"; then
+    status=up-to-date
+elif dpkg --compare-versions "$installed" lt "$latest_version"; then
+    status=update-available
+else
+    status=newer-than-channel
+fi
+
+if [ "$installed" = "$pinned" ]; then
+    test "$latest_version" != "$pinned" || {
+        test "$latest_url" = "$pinned_url"
+        test "$latest_sha" = "$pinned_sha"
+    }
+fi
+
+if [ "$action" = --check ]; then
+    echo "installed_version=$installed"
+    echo "eligible_version=$latest_version"
+    echo "channel=stable"
+    echo "status=$status"
+    echo "release_url=$latest_url"
+    echo "integrity=sha256:$latest_sha"
+    exit 0
+fi
+
+if [ "$status" != update-available ]; then
+    echo "SuiteCRM $installed is $status on the stable channel."
+    exit 0
+fi
+
+archive="$tmp/SuiteCRM-$latest_version.zip"
+curl --fail --location --retry 3 --output "$archive" "$latest_url"
+echo "$latest_sha  $archive" | sha256sum --check --strict -
+
+package_dir="$WEBROOT/tmp/package/upgrade"
+package_name="SuiteCRM-$latest_version.zip"
+install -d -o www-data -g www-data -m 0755 "$package_dir"
+install -o www-data -g www-data -m 0644 \
+    "$archive" "$package_dir/$package_name"
+
+cd "$WEBROOT"
+runuser -u www-data -- ./bin/console suitecrm:app:upgrade \
+    -t "SuiteCRM-$latest_version"
+runuser -u www-data -- ./bin/console suitecrm:app:upgrade-finalize \
+    -t "SuiteCRM-$latest_version"
+rm -f -- "$package_dir/$package_name"
+
+test "$(tr -d '[:space:]' < "$WEBROOT/VERSION")" = "$latest_version"
+echo "SuiteCRM updated from $installed to $latest_version."
